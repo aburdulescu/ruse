@@ -2,9 +2,31 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const usage =
-    \\Usage: ruse PROG [ARG]...
+    \\Usage: ruse [--docs] PROG [ARG]...
     \\
     \\Run PROG and display its resource usage when it exits.
+    \\
+;
+
+const docs =
+    \\utime
+    \\  Time spent executing in  user  mode.
+    \\stime
+    \\  Time spent executing in kernel mode.
+    \\maxrss
+    \\  Maximum resident set size used, in kilobytes.
+    \\minflt
+    \\  Number of page faults which were serviced without requiring any I/O.
+    \\majflt
+    \\  Number of page faults which were serviced by doing I/O.
+    \\inblock
+    \\  Number of times the file system had to read from the disk.
+    \\oublock
+    \\  Number of times the file system had to write to the disk.
+    \\nvcsw
+    \\  Number of times processes voluntarily invoked a context switch (usually to wait for some service).
+    \\nivcsw
+    \\  Number of times an involuntary context switch took place (because a time slice expired, or another process of higher priority was scheduled).
     \\
 ;
 
@@ -21,6 +43,11 @@ pub fn main() !void {
 
     if (args.len == 0) {
         try stdout.writeAll(usage);
+        return;
+    }
+
+    if (std.mem.eql(u8, args[0], "--docs")) {
+        try stdout.writeAll(docs);
         return;
     }
 
