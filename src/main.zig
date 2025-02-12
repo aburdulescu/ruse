@@ -9,8 +9,12 @@ const usage =
 ;
 
 const docs =
+    \\rc
+    \\  Exit code of the process.
+    \\wtime
+    \\  Wall clock time, i.e. actual time spent executing the process.
     \\utime
-    \\  Time spent executing in  user  mode.
+    \\  Time spent executing in user mode.
     \\stime
     \\  Time spent executing in kernel mode.
     \\maxrss
