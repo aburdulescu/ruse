@@ -114,8 +114,8 @@ pub fn main() !void {
 }
 
 fn tvToNs(tv: std.os.linux.timeval) u64 {
-    const s: u64 = @intCast(tv.tv_sec);
-    const u: u64 = @intCast(tv.tv_usec);
+    const s: u64 = @intCast(tv.sec);
+    const u: u64 = @intCast(tv.usec);
     return s * std.time.ns_per_s + u * std.time.ns_per_us;
 }
 
