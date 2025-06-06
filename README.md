@@ -4,7 +4,7 @@ Run process and display its [rusage](https://man7.org/linux/man-pages/man2/getru
 
 ## Build and Install
 
-Download zig 0.13: https://ziglang.org/download/
+Download zig: https://ziglang.org/download/
 
 Then build and install it to somewhere in your PATH:
 
