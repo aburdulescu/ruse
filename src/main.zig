@@ -69,9 +69,10 @@ pub fn main() !void {
     const end = timer.read();
 
     const exit_status: u8 = switch (term) {
-        .Exited => |code| code,
-        else => {
-            try stderr.print("error: command terminated unexpectedly\n", .{});
+        .Exited, .Stopped => |code| @intCast(code),
+        .Signal => |sig| @intCast(128 + sig),
+        else => |code| {
+            try stderr.print("error: command terminated unexpectedly with status {}\n", .{code});
             std.process.exit(1);
         },
     };
