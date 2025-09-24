@@ -35,9 +35,6 @@ const docs =
 ;
 
 pub fn main() !void {
-    const stdout = std.io.getStdOut().writer();
-    const stderr = std.io.getStdErr().writer();
-
     var arena_instance = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena_instance.deinit();
     const arena = arena_instance.allocator();
@@ -46,12 +43,12 @@ pub fn main() !void {
     const args = all_args[1..];
 
     if (args.len == 0) {
-        try stdout.writeAll(usage);
+        std.debug.print(usage, .{});
         return;
     }
 
     if (std.mem.eql(u8, args[0], "--docs")) {
-        try stdout.writeAll(docs);
+        std.debug.print(docs, .{});
         return;
     }
 
@@ -72,42 +69,42 @@ pub fn main() !void {
         .Exited, .Stopped => |code| @intCast(code),
         .Signal => |sig| @intCast(128 + sig),
         else => |code| {
-            try stderr.print("error: command terminated unexpectedly with status {}\n", .{code});
+            std.debug.print("error: command terminated unexpectedly with status {}\n", .{code});
             std.process.exit(1);
         },
     };
 
-    const elapsed_time = prettyTime(end - start);
+    const elapsed_time = end - start;
 
     switch (builtin.os.tag) {
         .linux => {
             const r = child.resource_usage_statistics.rusage.?;
 
-            const usr_time = prettyTime(tvToNs(r.utime));
-            const sys_time = prettyTime(tvToNs(r.stime));
+            const usr_time = tvToNs(r.utime);
+            const sys_time = tvToNs(r.stime);
 
             const max_rss: u64 = @intCast(r.maxrss);
             const pretty_max_rss = prettySize(max_rss * 1024);
 
-            try stderr.print("\tcmd        \"", .{});
+            std.debug.print("\tcmd        \"", .{});
             for (0.., args) |index, arg| {
                 if (index == args.len - 1) {
-                    try stderr.print("{s}\"\n", .{arg});
+                    std.debug.print("{s}\"\n", .{arg});
                 } else {
-                    try stderr.print("{s} ", .{arg});
+                    std.debug.print("{s} ", .{arg});
                 }
             }
-            try stderr.print("\trc         {d}\n", .{exit_status});
-            try stderr.print("\twtime      {d}{s}\n", .{ elapsed_time.value, elapsed_time.unit });
-            try stderr.print("\tutime      {d}{s}\n", .{ usr_time.value, usr_time.unit });
-            try stderr.print("\tstime      {d}{s}\n", .{ sys_time.value, sys_time.unit });
-            try stderr.print("\tmaxrss     {d}{s}\n", .{ pretty_max_rss.value, pretty_max_rss.unit });
-            try stderr.print("\tminflt     {d}\n", .{r.minflt});
-            try stderr.print("\tmajflt     {d}\n", .{r.majflt});
-            try stderr.print("\tinblock    {d}\n", .{r.inblock});
-            try stderr.print("\toublock    {d}\n", .{r.oublock});
-            try stderr.print("\tnvcsw      {d}\n", .{r.nvcsw});
-            try stderr.print("\tnivcsw     {d}\n", .{r.nivcsw});
+            std.debug.print("\trc         {d}\n", .{exit_status});
+            std.debug.print("\twtime      {D}\n", .{ elapsed_time });
+            std.debug.print("\tutime      {D}\n", .{ usr_time });
+            std.debug.print("\tstime      {D}\n", .{ sys_time });
+            std.debug.print("\tmaxrss     {d}{s}\n", .{ pretty_max_rss.value, pretty_max_rss.unit });
+            std.debug.print("\tminflt     {d}\n", .{r.minflt});
+            std.debug.print("\tmajflt     {d}\n", .{r.majflt});
+            std.debug.print("\tinblock    {d}\n", .{r.inblock});
+            std.debug.print("\toublock    {d}\n", .{r.oublock});
+            std.debug.print("\tnvcsw      {d}\n", .{r.nvcsw});
+            std.debug.print("\tnivcsw     {d}\n", .{r.nivcsw});
         },
 
         else => @panic("os not supported"),
@@ -118,31 +115,6 @@ fn tvToNs(tv: std.os.linux.timeval) u64 {
     const s: u64 = @intCast(tv.sec);
     const u: u64 = @intCast(tv.usec);
     return s * std.time.ns_per_s + u * std.time.ns_per_us;
-}
-
-const PrettyTime = struct {
-    value: f64,
-    unit: []const u8,
-};
-
-fn prettyTime(v: u64) PrettyTime {
-    if (v >= std.time.ns_per_s) {
-        const vf: f64 = @floatFromInt(v);
-        const df: f64 = @floatFromInt(std.time.ns_per_s);
-        return .{ .value = vf / df, .unit = "s" };
-    }
-    if (v >= std.time.ns_per_ms) {
-        const vf: f64 = @floatFromInt(v);
-        const df: f64 = @floatFromInt(std.time.ns_per_ms);
-        return .{ .value = vf / df, .unit = "ms" };
-    }
-    if (v >= std.time.ns_per_us) {
-        const vf: f64 = @floatFromInt(v);
-        const df: f64 = @floatFromInt(std.time.ns_per_us);
-        return .{ .value = vf / df, .unit = "us" };
-    }
-    const vf: f64 = @floatFromInt(v);
-    return .{ .value = vf, .unit = "ns" };
 }
 
 const PrettySize = struct {

@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) void {
     comptime {
-        const needed = "0.14.1";
+        const needed = "0.15.1";
         const current = builtin.zig_version;
         const needed_vers = std.SemanticVersion.parse(needed) catch unreachable;
         if (current.order(needed_vers) != .eq) {
@@ -19,15 +19,15 @@ pub fn build(b: *std.Build) void {
         .ReleaseFast, .ReleaseSmall => true,
     };
 
-    const exe_options = std.Build.ExecutableOptions{
+    const exe = b.addExecutable(.{
         .name = "ruse",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
-        .single_threaded = true,
-        .strip = strip,
-    };
-
-    const exe = b.addExecutable(exe_options);
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+            .single_threaded = true,
+            .strip = strip,
+        }),
+    });
     b.installArtifact(exe);
 }
