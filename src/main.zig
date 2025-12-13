@@ -77,14 +77,14 @@ pub fn main() !void {
     const elapsed_time = end - start;
 
     switch (builtin.os.tag) {
-        .linux => {
+        .linux, .macos => {
+            const max_rss = child.resource_usage_statistics.getMaxRss().?;
+            const pretty_max_rss = prettySize(max_rss);
+
             const r = child.resource_usage_statistics.rusage.?;
 
             const usr_time = tvToNs(r.utime);
             const sys_time = tvToNs(r.stime);
-
-            const max_rss: u64 = @intCast(r.maxrss);
-            const pretty_max_rss = prettySize(max_rss * 1024);
 
             std.debug.print("\tcmd        \"", .{});
             for (0.., args) |index, arg| {
@@ -111,7 +111,7 @@ pub fn main() !void {
     }
 }
 
-fn tvToNs(tv: std.os.linux.timeval) u64 {
+fn tvToNs(tv: std.c.timeval) u64 {
     const s: u64 = @intCast(tv.sec);
     const u: u64 = @intCast(tv.usec);
     return s * std.time.ns_per_s + u * std.time.ns_per_us;
