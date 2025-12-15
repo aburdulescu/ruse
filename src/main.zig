@@ -35,6 +35,12 @@ const docs =
 ;
 
 pub fn main() !void {
+    comptime {
+        if (builtin.os.tag != .linux and builtin.os.tag != .macos) {
+            @compileError("os not supported");
+        }
+    }
+
     var arena_instance = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena_instance.deinit();
     const arena = arena_instance.allocator();
@@ -57,12 +63,8 @@ pub fn main() !void {
 
     var timer = std.time.Timer.start() catch @panic("need timer to work");
 
-    // start time
     const start = timer.read();
-
     const term = try child.spawnAndWait();
-
-    // stop time
     const end = timer.read();
 
     const exit_status: u8 = switch (term) {
@@ -74,41 +76,35 @@ pub fn main() !void {
         },
     };
 
-    const elapsed_time = end - start;
+    const wall_time = end - start;
 
-    switch (builtin.os.tag) {
-        .linux, .macos => {
-            const max_rss = child.resource_usage_statistics.getMaxRss().?;
-            const pretty_max_rss = prettySize(max_rss);
+    const max_rss = child.resource_usage_statistics.getMaxRss().?;
+    const pretty_max_rss = prettySize(max_rss);
 
-            const r = child.resource_usage_statistics.rusage.?;
+    const r = child.resource_usage_statistics.rusage.?;
 
-            const usr_time = tvToNs(r.utime);
-            const sys_time = tvToNs(r.stime);
+    const usr_time = tvToNs(r.utime);
+    const sys_time = tvToNs(r.stime);
 
-            std.debug.print("\tcmd        \"", .{});
-            for (0.., args) |index, arg| {
-                if (index == args.len - 1) {
-                    std.debug.print("{s}\"\n", .{arg});
-                } else {
-                    std.debug.print("{s} ", .{arg});
-                }
-            }
-            std.debug.print("\trc         {d}\n", .{exit_status});
-            std.debug.print("\twtime      {D}\n", .{ elapsed_time });
-            std.debug.print("\tutime      {D}\n", .{ usr_time });
-            std.debug.print("\tstime      {D}\n", .{ sys_time });
-            std.debug.print("\tmaxrss     {d}{s}\n", .{ pretty_max_rss.value, pretty_max_rss.unit });
-            std.debug.print("\tminflt     {d}\n", .{r.minflt});
-            std.debug.print("\tmajflt     {d}\n", .{r.majflt});
-            std.debug.print("\tinblock    {d}\n", .{r.inblock});
-            std.debug.print("\toublock    {d}\n", .{r.oublock});
-            std.debug.print("\tnvcsw      {d}\n", .{r.nvcsw});
-            std.debug.print("\tnivcsw     {d}\n", .{r.nivcsw});
-        },
-
-        else => @panic("os not supported"),
+    std.debug.print("\tcmd        \"", .{});
+    for (0.., args) |index, arg| {
+        if (index == args.len - 1) {
+            std.debug.print("{s}\"\n", .{arg});
+        } else {
+            std.debug.print("{s} ", .{arg});
+        }
     }
+    std.debug.print("\trc         {d}\n", .{exit_status});
+    std.debug.print("\twtime      {D}\n", .{wall_time});
+    std.debug.print("\tutime      {D}\n", .{usr_time});
+    std.debug.print("\tstime      {D}\n", .{sys_time});
+    std.debug.print("\tmaxrss     {d}{s}\n", .{ pretty_max_rss.value, pretty_max_rss.unit });
+    std.debug.print("\tminflt     {d}\n", .{r.minflt});
+    std.debug.print("\tmajflt     {d}\n", .{r.majflt});
+    std.debug.print("\tinblock    {d}\n", .{r.inblock});
+    std.debug.print("\toublock    {d}\n", .{r.oublock});
+    std.debug.print("\tnvcsw      {d}\n", .{r.nvcsw});
+    std.debug.print("\tnivcsw     {d}\n", .{r.nivcsw});
 }
 
 fn tvToNs(tv: std.c.timeval) u64 {
