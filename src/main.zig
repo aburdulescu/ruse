@@ -34,18 +34,16 @@ const docs =
     \\
 ;
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     comptime {
         if (builtin.os.tag != .linux and builtin.os.tag != .macos) {
             @compileError("os not supported");
         }
     }
 
-    var arena_instance = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena_instance.deinit();
-    const arena = arena_instance.allocator();
+    const arena = init.arena.allocator();
 
-    const all_args = try std.process.argsAlloc(arena);
+    const all_args = try init.minimal.args.toSlice(arena);
     const args = all_args[1..];
 
     if (args.len == 0) {
@@ -58,25 +56,27 @@ pub fn main() !void {
         return;
     }
 
-    var child = std.process.Child.init(args, arena);
-    child.request_resource_usage_statistics = true;
+    const options = std.process.SpawnOptions {
+          .argv = args,
+          .request_resource_usage_statistics = true,
+    };
 
-    var timer = std.time.Timer.start() catch @panic("need timer to work");
-
-    const start = timer.read();
-    const term = try child.spawnAndWait();
-    const end = timer.read();
+    const start = std.Io.Clock.now(.awake, init.io);
+    var child = try std.process.spawn(init.io, options);
+    const term = try child.wait(init.io);
+    const end = std.Io.Clock.now(.awake, init.io);
 
     const exit_status: u8 = switch (term) {
-        .Exited, .Stopped => |code| @intCast(code),
-        .Signal => |sig| @intCast(128 + sig),
+        .exited => |code| @intCast(code),
+        .stopped => |sig| @intCast(@intFromEnum(sig)),
+        .signal => |sig| @intCast(128 + @intFromEnum(sig)),
         else => |code| {
             std.debug.print("error: command terminated unexpectedly with status {}\n", .{code});
             std.process.exit(1);
         },
     };
 
-    const wall_time = end - start;
+    const wall_time = start.durationTo(end);
 
     const max_rss = child.resource_usage_statistics.getMaxRss().?;
     const pretty_max_rss = prettySize(max_rss);
@@ -95,9 +95,9 @@ pub fn main() !void {
         }
     }
     std.debug.print("\trc         {d}\n", .{exit_status});
-    std.debug.print("\twtime      {D}\n", .{wall_time});
-    std.debug.print("\tutime      {D}\n", .{usr_time});
-    std.debug.print("\tstime      {D}\n", .{sys_time});
+    std.debug.print("\twtime      {f}\n", .{wall_time});
+    std.debug.print("\tutime      {f}\n", .{usr_time});
+    std.debug.print("\tstime      {f}\n", .{sys_time});
     std.debug.print("\tmaxrss     {d}{s}\n", .{ pretty_max_rss.value, pretty_max_rss.unit });
     std.debug.print("\tminflt     {d}\n", .{r.minflt});
     std.debug.print("\tmajflt     {d}\n", .{r.majflt});
@@ -107,10 +107,10 @@ pub fn main() !void {
     std.debug.print("\tnivcsw     {d}\n", .{r.nivcsw});
 }
 
-fn tvToNs(tv: std.c.timeval) u64 {
+fn tvToNs(tv: std.c.timeval) std.Io.Duration {
     const s: u64 = @intCast(tv.sec);
     const u: u64 = @intCast(tv.usec);
-    return s * std.time.ns_per_s + u * std.time.ns_per_us;
+    return std.Io.Duration{ .nanoseconds = s * std.time.ns_per_s + u * std.time.ns_per_us };
 }
 
 const PrettySize = struct {
