@@ -57,8 +57,8 @@ pub fn main(init: std.process.Init) !void {
     }
 
     const options = std.process.SpawnOptions {
-          .argv = args,
-          .request_resource_usage_statistics = true,
+        .argv = args,
+        .request_resource_usage_statistics = true,
     };
 
     const start = std.Io.Clock.now(.awake, init.io);
