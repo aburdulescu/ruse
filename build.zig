@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) void {
     comptime {
-        const needed = "0.16.0";
+        const needed = "0.17.0";
         const current = builtin.zig_version;
         const needed_vers = std.SemanticVersion.parse(needed) catch unreachable;
         if (current.order(needed_vers) != .eq) {
@@ -15,8 +15,8 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const strip = b.option(bool, "strip", "Omit debug information") orelse switch (optimize) {
-        .Debug, .ReleaseSafe => false,
-        .ReleaseFast, .ReleaseSmall => true,
+        .debug, .safe => false,
+        .fast, .small => true,
     };
 
     const exe = b.addExecutable(.{
